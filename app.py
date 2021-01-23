@@ -7,8 +7,9 @@ import dateutil.parser
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy, BaseQuery
 from flask_migrate import Migrate
+from sqlalchemy.ext.hybrid import hybrid_property
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -35,37 +36,152 @@ migrate = Migrate(app, db)
 # Models.
 # ----------------------------------------------------------------------------#
 
-class Venue(db.Model):
-    __tablename__ = 'Venue'
-
+class Show(db.Model):
+    query: BaseQuery
+    __tablename__ = 'shows'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id', ondelete='CASCADE'))
+    venue_id = db.Column(db.Integer, db.ForeignKey('venues.id', ondelete='CASCADE'))
+    start_time = db.Column(db.DateTime, nullable=False)
+    artist = db.relationship(
+        'Artist',
+        lazy=True,
+        backref=db.backref('shows_relation', lazy='dynamic', cascade="all, delete")
+    )
+    venue = db.relationship(
+        'Venue',
+        lazy=True,
+        backref=db.backref('shows_relation', lazy='dynamic', cascade="all, delete")
+    )
 
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    @hybrid_property
+    def artist_name(self):
+        return self.artist.name
+
+    @hybrid_property
+    def artist_image_link(self):
+        return self.artist.image_link
+
+    @hybrid_property
+    def venue_name(self):
+        return self.venue.name
+
+    @hybrid_property
+    def venue_image_link(self):
+        return self.venue.image_link
+
+    def __repr__(self):
+        return f'<Show venue_name:{self.venue_name} artist_name:{self.artist_name}>'
 
 
-class Artist(db.Model):
-    __tablename__ = 'Artist'
+# Adding Genre as a table for possible needs of adding more as an administrator "not a programmer"
+class Genre(db.Model):
+    query: BaseQuery
+    __tablename__ = 'genres'
+    id = db.Column(db.Integer, primary_key=True, unique=True)
+    name = db.Column(db.String, nullable=False)
 
+    @staticmethod
+    def genres_tuples():
+        return [(str(x.id), x.name) for x in db.session.query(Genre.id, Genre.name)]
+
+    @staticmethod
+    def get_genres_by_ids(ids: list):
+        return db.session.query(Genre).filter(Genre.id.in_(ids)).all()
+
+    def __repr__(self):
+        return f"<Genre {self.id} {self.name}>"
+
+
+genres_venues = db.Table(
+    'genres_venues',
+    db.Column('genre_id', db.Integer, db.ForeignKey('genres.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('venue_id', db.Integer, db.ForeignKey('venues.id', ondelete='CASCADE'), primary_key=True),
+)
+
+genres_artists = db.Table(
+    'genres_artists',
+    db.Column('genre_id', db.Integer, db.ForeignKey('genres.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('artist_id', db.Integer, db.ForeignKey('artists.id', ondelete='CASCADE'), primary_key=True),
+)
+
+
+class HybridShowsMixin(object):
+    @hybrid_property
+    def shows(self):
+        return self.shows_relation.all()
+
+    @hybrid_property
+    def shows_count(self):
+        return self.shows_relation.count()
+
+    @hybrid_property
+    def upcoming_shows(self):
+        return self.shows_relation.filter(Show.start_time >= datetime.now()).all()
+
+    @hybrid_property
+    def upcoming_shows_count(self):
+        return self.shows_relation.filter(Show.start_time >= datetime.now()).count()
+
+    @hybrid_property
+    def past_shows(self):
+        return self.shows_relation.filter(Show.start_time <= datetime.now()).all()
+
+    @hybrid_property
+    def past_shows_count(self):
+        return self.shows_relation.filter(Show.start_time <= datetime.now()).count()
+
+
+class HybridGenresMixin(object):
+    @hybrid_property
+    def genres(self):
+        return [g.name for g in self.genres_relation]
+
+
+class Venue(db.Model, HybridShowsMixin, HybridGenresMixin):
+    query: BaseQuery
+    __tablename__ = 'venues'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
+    name = db.Column(db.String, nullable=False)
+    city = db.Column(db.String(120), nullable=False)
+    state = db.Column(db.String(120), nullable=False)
+    address = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(120), nullable=True, unique=True)
+    image_link = db.Column(db.String(500), nullable=False)
+    facebook_link = db.Column(db.String(120), nullable=True, unique=True)
+    website = db.Column(db.String(120), nullable=True, unique=True)
+    seeking_description = db.Column(db.String(1000), nullable=True)
+    genres_relation = db.relationship('Genre', secondary=genres_venues, lazy='joined')
 
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    @hybrid_property
+    def seeking_talent(self):
+        return self.seeking_description is not None
+
+    def __repr__(self):
+        return f"<Venue {self.id} {self.name}>"
 
 
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+class Artist(db.Model, HybridShowsMixin, HybridGenresMixin):
+    query: BaseQuery
+    __tablename__ = 'artists'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    city = db.Column(db.String(120), nullable=False)
+    state = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(120), nullable=True, unique=True)
+    image_link = db.Column(db.String(500), nullable=False)
+    facebook_link = db.Column(db.String(120), nullable=True, unique=True)
+    website = db.Column(db.String(120), nullable=True, unique=True)
+    seeking_description = db.Column(db.String(1000), nullable=True)
+    genres_relation = db.relationship('Genre', secondary=genres_artists, lazy='joined')
+
+    @hybrid_property
+    def seeking_venue(self):
+        return self.seeking_description is not None
+
+    def __repr__(self):
+        return f"<Artist {self.id} {self.name}>"
+
 
 # ----------------------------------------------------------------------------#
 # Filters.
