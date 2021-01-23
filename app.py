@@ -71,13 +71,16 @@ class Artist(db.Model):
 # Filters.
 # ----------------------------------------------------------------------------#
 
-def format_datetime(value, format='medium'):
-    date = dateutil.parser.parse(value)
-    if format == 'full':
-        format = "EEEE MMMM, d, y 'at' h:mma"
-    elif format == 'medium':
-        format = "EE MM, dd, y h:mma"
-    return babel.dates.format_datetime(date, format)
+def format_datetime(value, format_name='medium'):
+    date = value
+    if type(value) is not datetime:
+        date = dateutil.parser.parse(value)
+    datetime_format = "EE MM, dd, y h:mma"
+    if format_name == 'full':
+        datetime_format = "EEEE MMMM, d, y 'at' h:mma"
+    elif format_name == 'medium':
+        datetime_format = "EE MM, dd, y h:mma"
+    return dates.format_datetime(date, datetime_format)
 
 
 app.jinja_env.filters['datetime'] = format_datetime
