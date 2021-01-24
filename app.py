@@ -451,18 +451,19 @@ def create_show():
 
 @app.route('/shows/search', methods=["POST"])
 def search_shows():
-    q = request.form.get('search_term', '')
-    venues_ids = [i[0] for i in db.session.query(Venue.id).filter(Venue.name.ilike(f"%{q}%"))]
-    artists_ids = [i[0] for i in db.session.query(Artist.id).filter(Artist.name.ilike(f"%{q}%"))]
-    shows_query = Show.query.filter(or_(
-        Show.venue_id.in_(venues_ids),
-        Show.artist_id.in_(artists_ids)
+    search_term = request.form.get('search_term', '')
+    q = f"%{search_term}%"
+
+    shows_query = db.session.query(Show).join(Artist).join(Venue).filter(or_(
+        Venue.name.ilike(q),
+        Artist.name.ilike(q)
     ))
+
     response = {
         "count": shows_query.count(),
         "data": shows_query
     }
-    return render_template('pages/search_shows.html', results=response, search_term=q)
+    return render_template('pages/search_shows.html', results=response, search_term=search_term)
 
 
 @app.errorhandler(404)
