@@ -145,6 +145,9 @@ class HybridGenresMixin(object):
 class Venue(db.Model, HybridShowsMixin, HybridGenresMixin):
     query: BaseQuery
     __tablename__ = 'venues'
+    # it's only used to get id its from the URI combined with _id
+    __model_name__ = 'venue'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     city = db.Column(db.String(120), nullable=False)
@@ -163,6 +166,13 @@ class Venue(db.Model, HybridShowsMixin, HybridGenresMixin):
         s = self.seeking_description
         return s is not None and s
 
+    @staticmethod
+    def venues_choices():
+        return [
+            (str(v.id), f"ID:{v.id} {v.name}") for v in
+            db.session.query(Venue.id, Venue.name).order_by(Venue.id)
+        ]
+
     def __repr__(self):
         return f"<Venue {self.id} {self.name}>"
 
@@ -170,6 +180,9 @@ class Venue(db.Model, HybridShowsMixin, HybridGenresMixin):
 class Artist(db.Model, HybridShowsMixin, HybridGenresMixin):
     query: BaseQuery
     __tablename__ = 'artists'
+    # it's only used to get id its from the URI combined with _id
+    __model_name__ = 'artist'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     city = db.Column(db.String(120), nullable=False)
@@ -186,6 +199,13 @@ class Artist(db.Model, HybridShowsMixin, HybridGenresMixin):
     def seeking_venue(self):
         s = self.seeking_description
         return s is not None and s
+
+    @staticmethod
+    def artists_choices():
+        return [
+            (str(a.id), f"ID:{a.id} {a.name}") for a in
+            db.session.query(Artist.id, Artist.name).order_by(Artist.id)
+        ]
 
     def __repr__(self):
         return f"<Artist {self.id} {self.name}>"

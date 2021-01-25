@@ -4,6 +4,7 @@
 
 import logging
 import sys
+from datetime import datetime
 from logging import Formatter, FileHandler
 
 import dateutil.parser
@@ -15,8 +16,7 @@ from flask_moment import Moment
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from forms import *
-from models import setup_db, Venue, Genre, Artist, Show
+from models import setup_db, Venue, Artist, Show
 
 # ----------------------------------------------------------------------------#
 # App Config.
@@ -102,7 +102,9 @@ def show_venue(venue_id):
 
 @app.route('/venues/create', methods=['GET', 'POST'])
 def create_venue():
-    form = VenueForm(genres_choices=Genre.genres_choices())
+    # it must be imported here to avoid circular import
+    from forms import VenueForm
+    form = VenueForm()
 
     if form.validate_on_submit():
         venue = Venue()
@@ -126,9 +128,10 @@ def create_venue():
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST', 'GET'])
 def edit_venue(venue_id):
+    # it must be imported here to avoid circular import
+    from forms import VenueForm
     venue: Venue = Venue.query.get_or_404(venue_id)
-    form = VenueForm(genres_choices=Genre.genres_choices(), obj=venue)
-    # Setting genres_choices here and populate form with current venue data
+    form = VenueForm(obj=venue)
     # and I'm not adding request.form as it's already added by flask-wtf
     # look here https://flask-wtf.readthedocs.io/en/stable/quickstart.html
     ###
@@ -218,7 +221,9 @@ def show_artist(artist_id):
 
 @app.route('/artists/create', methods=['GET', 'POST'])
 def create_artist():
-    form = ArtistForm(genres_choices=Genre.genres_choices())
+    # it must be imported here to avoid circular import
+    from forms import ArtistForm
+    form = ArtistForm()
 
     if form.validate_on_submit():
         artist = Artist()
@@ -242,8 +247,10 @@ def create_artist():
 
 @app.route('/artists/<int:artist_id>/edit', methods=['GET', 'POST'])
 def edit_artist(artist_id):
+    # it must be imported here to avoid circular import
+    from forms import ArtistForm
     artist = Artist.query.get_or_404(artist_id)
-    form = ArtistForm(genres_choices=Genre.genres_choices(), obj=artist)
+    form = ArtistForm(obj=artist)
     artist_name = artist.name
     if form.validate_on_submit():
         form.populate_obj(artist)
@@ -292,15 +299,8 @@ def shows():
 
 @app.route('/shows/create', methods=['POST', 'GET'])
 def create_show():
-    venue_choices = [
-        (str(v.id), f"ID:{v.id} {v.name}") for v in
-        db.session.query(Venue.id, Venue.name).order_by(Venue.id)
-    ]
-    artist_choices = [
-        (str(a.id), f"ID:{a.id} {a.name}") for a in
-        db.session.query(Artist.id, Artist.name).order_by(Artist.id)
-    ]
-    form = ShowForm(artist_choices, venue_choices)
+    from forms import ShowForm
+    form = ShowForm()
 
     if form.validate_on_submit():
         show = Show()
