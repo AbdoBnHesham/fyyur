@@ -96,7 +96,7 @@ def search_venues():
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
-    data = db.session.query(Venue).join(Show).filter(
+    data = db.session.query(Venue).outerjoin(Show).filter(
         Venue.id == venue_id).first()
     return render_template('pages/show_venue.html', venue=data)
 
@@ -207,7 +207,7 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-    data = db.session.query(Artist).join(Show).filter(
+    data = db.session.query(Artist).outerjoin(Show).filter(
         Artist.id == artist_id).first()
     return render_template('pages/show_artist.html', artist=data)
 
