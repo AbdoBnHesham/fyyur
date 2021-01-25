@@ -15,9 +15,9 @@ from flask_moment import Moment
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import setup_db, Venue, Genre, Artist, Show
 from forms import *
 from helpers import *
+from models import setup_db, Venue, Genre, Artist, Show
 
 # ----------------------------------------------------------------------------#
 # App Config.
@@ -69,12 +69,14 @@ def venues():
     data = []
     areas = db.session.query(Venue.state, Venue.city).distinct()
     for state, city in areas:
-        # I didn't change key name of upcoming_shows_count to num_upcoming_shows as it's not used and
+        # I didn't change key name of upcoming_shows_count
+        # to num_upcoming_shows as it's not used and
         # if it was used I'll change it from the front-end side
         data.append({
             "city": city,
             "state": state,
-            "venues": Venue.query.filter(Venue.state == state, Venue.city == city)
+            "venues": Venue.query.filter(Venue.state == state,
+                                         Venue.city == city)
         })
     return render_template('pages/venues.html', areas=data)
 
@@ -88,12 +90,14 @@ def search_venues():
         "count": venues_query.count(),
         "data": venues_query
     }
-    return render_template('pages/search_venues.html', results=response, search_term=q)
+    return render_template('pages/search_venues.html', results=response,
+                           search_term=q)
 
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
-    data = db.session.query(Venue).join(Show).filter(Venue.id == venue_id).first()
+    data = db.session.query(Venue).join(Show).filter(
+        Venue.id == venue_id).first()
     return render_template('pages/show_venue.html', venue=data)
 
 
@@ -104,7 +108,8 @@ def create_venue():
 
     if form.validate_on_submit():
         venue = Venue()
-        populate_object_with_form_data(venue, form, Genre.get_genres_by_ids(form.genres.data))
+        populate_object_with_form_data(venue, form, Genre.get_genres_by_ids(
+            form.genres.data))
         try:
             db.session.add(venue)
             db.session.commit()
@@ -112,7 +117,9 @@ def create_venue():
             print(sys.exc_info())
             db.session.rollback()
             db.session.close()
-            flash('An error occurred. Venue ' + form.name.data + ' could not be listed.')
+            flash(
+                'An error occurred. Venue '
+                + form.name.data + ' could not be listed.')
             return render_template('forms/new_venue.html', form=form)
 
         flash('Venue ' + venue.name + ' was successfully listed!')
@@ -128,7 +135,8 @@ def edit_venue(venue_id):
     form.genres.choices = Genre.genres_tuples()
 
     if form.validate_on_submit():
-        populate_object_with_form_data(venue, form, Genre.get_genres_by_ids(form.genres.data))
+        populate_object_with_form_data(venue, form, Genre.get_genres_by_ids(
+            form.genres.data))
 
         try:
             db.session.add(venue)
@@ -137,15 +145,19 @@ def edit_venue(venue_id):
             print(sys.exc_info())
             db.session.rollback()
             db.session.close()
-            flash('An error occurred. Venue ' + venue_name + ' could not be edited.')
-            return render_template('forms/edit_venue.html', form=form, venue_name=venue_name)
+            flash(
+                'An error occurred. Venue '
+                + venue_name + ' could not be edited.')
+            return render_template('forms/edit_venue.html', form=form,
+                                   venue_name=venue_name)
 
         flash('Venue ' + venue.name + ' was successfully updated!')
         return redirect(url_for('show_venue', venue_id=venue_id))
 
     populate_form_with_object_data(form, venue)
 
-    return render_template('forms/edit_venue.html', form=form, venue_name=venue_name)
+    return render_template('forms/edit_venue.html', form=form,
+                           venue_name=venue_name)
 
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
@@ -162,8 +174,9 @@ def delete_venue(venue_id):
     finally:
         db.session.close()
 
-    # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
-    # clicking that button delete it from the db then redirect the user to the homepage
+    # BONUS CHALLENGE: Implement a button to delete a Venue
+    # on a Venue Page, have it so that clicking that button
+    # delete it from the db then redirect the user to the homepage
     # I'm handling it from the front end
     return '', 204
 
@@ -181,18 +194,21 @@ def search_artists():
     q = request.form.get('search_term', '')
     artists_query = Artist.query.filter(Artist.name.ilike(f'%{q}%'))
 
-    # I didn't loop throw venues and change upcoming_shows_count because it will take resources for no reason
+    # I didn't loop throw venues and change upcoming_shows_count
+    # because it will take resources for no reason
     # so I would simply change it from the front-end size if it was used
     response = {
         "count": artists_query.count(),
         "data": artists_query
     }
-    return render_template('pages/search_artists.html', results=response, search_term=q)
+    return render_template('pages/search_artists.html', results=response,
+                           search_term=q)
 
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-    data = db.session.query(Artist).join(Show).filter(Artist.id == artist_id).first()
+    data = db.session.query(Artist).join(Show).filter(
+        Artist.id == artist_id).first()
     return render_template('pages/show_artist.html', artist=data)
 
 
@@ -202,12 +218,15 @@ def create_artist():
     form.genres.choices = Genre.genres_tuples()
     if form.validate_on_submit():
         artist = Artist()
-        populate_object_with_form_data(artist, form, Genre.get_genres_by_ids(form.genres.data))
+        populate_object_with_form_data(artist, form, Genre.get_genres_by_ids(
+            form.genres.data))
         try:
             db.session.add(artist)
             db.session.commit()
         except SQLAlchemyError:
-            flash('An error occurred. Artist ' + form.name.data + ' could not be listed.')
+            flash(
+                'An error occurred. Artist '
+                + form.name.data + ' could not be listed.')
             print(sys.exc_info())
             db.session.rollback()
             db.session.close()
@@ -224,22 +243,29 @@ def edit_artist(artist_id):
     form = ArtistForm()
     form.genres.choices = Genre.genres_tuples()
     artist_name = artist.name
-    if form.validate_on_submit():  # this function return true only if it's a POST request and it's valid form
-        populate_object_with_form_data(artist, form, Genre.get_genres_by_ids(form.genres.data))
+    # this function return true only if it's a POST request and it's valid form
+    if form.validate_on_submit():
+        populate_object_with_form_data(artist, form, Genre.get_genres_by_ids(
+            form.genres.data))
         try:
             db.session.add(artist)
             db.session.commit()
         except SQLAlchemyError:
-            flash('An error occurred. Artist ' + artist_name + ' could not be edited.')
+            flash(
+                'An error occurred. Artist '
+                + artist_name + ' could not be edited.'
+            )
             print(sys.exc_info())
             db.session.rollback()
             db.session.close()
-            return render_template('forms/edit_artist.html', form=form, artist_name=artist_name)
+            return render_template('forms/edit_artist.html', form=form,
+                                   artist_name=artist_name)
         return redirect(url_for('show_artist', artist_id=artist_id))
 
     populate_form_with_object_data(form, artist)
 
-    return render_template('forms/edit_artist.html', form=form, artist_name=artist_name)
+    return render_template('forms/edit_artist.html', form=form,
+                           artist_name=artist_name)
 
 
 @app.route('/artists/<artist_id>', methods=['DELETE'])
@@ -271,10 +297,12 @@ def create_show():
     # renders form. do not touch.              #I can't resist 😅
     form = ShowForm()
     form.artist_id.choices = [
-        (str(a.id), f"ID:{a.id} {a.name}") for a in db.session.query(Artist.id, Artist.name).order_by(Artist.id)
+        (str(a.id), f"ID:{a.id} {a.name}") for a in
+        db.session.query(Artist.id, Artist.name).order_by(Artist.id)
     ]
     form.venue_id.choices = [
-        (str(v.id), f"ID:{v.id} {v.name}") for v in db.session.query(Venue.id, Venue.name).order_by(Venue.id)
+        (str(v.id), f"ID:{v.id} {v.name}") for v in
+        db.session.query(Venue.id, Venue.name).order_by(Venue.id)
     ]
 
     if form.validate_on_submit():
@@ -313,7 +341,8 @@ def search_shows():
         "count": shows_query.count(),
         "data": shows_query
     }
-    return render_template('pages/search_shows.html', results=response, search_term=search_term)
+    return render_template('pages/search_shows.html', results=response,
+                           search_term=search_term)
 
 
 @app.errorhandler(404)
@@ -327,9 +356,10 @@ def server_error(error):
 
 
 if not app.debug:
+    f = '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
     file_handler = FileHandler('error.log')
     file_handler.setFormatter(
-        Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
+        Formatter(f)
     )
     app.logger.setLevel(logging.INFO)
     file_handler.setLevel(logging.INFO)

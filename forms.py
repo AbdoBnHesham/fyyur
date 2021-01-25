@@ -1,18 +1,27 @@
 from datetime import datetime
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, TextAreaField
+from wtforms import (
+    StringField,
+    SelectField,
+    SelectMultipleField,
+    DateTimeField,
+    TextAreaField
+)
 from wtforms.validators import DataRequired, URL, Optional, Regexp
+
 from enums import State
 
 
 class ShowForm(FlaskForm):
-    artist_id = SelectField(  # using select to make sure it exists and for better UX
+    artist_id = SelectField(
+        # using select to make sure it exists and for better UX
         'artist_id',
         validators=[DataRequired()],
         choices=[],  # dynamically set
     )
-    venue_id = SelectField(  # using select to make sure it exists and for better UX
+    venue_id = SelectField(
+        # using select to make sure it exists and for better UX
         'venue_id',
         validators=[DataRequired()],
         choices=[],  # dynamically set
@@ -53,20 +62,20 @@ class BaseForm(object):
         validators=[URL()]
     )
     facebook_link = StringField(
-        # TODO implement enum restriction               # I don't understand
+        # Maybe there is no facebook account for this venue
         'facebook_link',
-        validators=[Optional(), URL()]  # Maybe there is no facebook account for this venue
+        validators=[Optional(), URL()]
     )
     website = StringField(
+        # Maybe there is no website for this venue
         'website',
-        validators=[Optional(), URL()]  # Maybe there is no website for this venue
+        validators=[Optional(), URL()]
     )
     seeking_description = TextAreaField(
         'seeking_description',
         validators=[Optional()]  # it can be empty
     )
     genres = SelectMultipleField(
-        # TODO implement enum restriction               # I don't understand but I have done it with choices from db
         'genres',
         validators=[DataRequired()],
         choices=[]  # Dynamically set
