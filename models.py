@@ -65,9 +65,9 @@ class Genre(db.Model):
     name = db.Column(db.String, nullable=False)
 
     @staticmethod
-    def genres_tuples():
+    def genres_choices():
         return [(str(x.id), x.name) for x in
-                db.session.query(Genre.id, Genre.name)]
+                db.session.query(Genre.id, Genre.name).order_by('name')]
 
     @staticmethod
     def get_genres_by_ids(ids: list):
@@ -133,6 +133,14 @@ class HybridGenresMixin(object):
     def genres(self):
         return [g.name for g in self.genres_relation]
 
+    @hybrid_property
+    def genres_ids(self):
+        return [str(g.id) for g in self.genres_relation]
+
+    @genres_ids.setter
+    def genres_ids(self, ids):
+        self.genres_relation = Genre.get_genres_by_ids(ids)
+
 
 class Venue(db.Model, HybridShowsMixin, HybridGenresMixin):
     query: BaseQuery
@@ -152,7 +160,8 @@ class Venue(db.Model, HybridShowsMixin, HybridGenresMixin):
 
     @hybrid_property
     def seeking_talent(self):
-        return self.seeking_description is not None
+        s = self.seeking_description
+        return s is not None and s
 
     def __repr__(self):
         return f"<Venue {self.id} {self.name}>"
@@ -175,7 +184,8 @@ class Artist(db.Model, HybridShowsMixin, HybridGenresMixin):
 
     @hybrid_property
     def seeking_venue(self):
-        return self.seeking_description is not None
+        s = self.seeking_description
+        return s is not None and s
 
     def __repr__(self):
         return f"<Artist {self.id} {self.name}>"

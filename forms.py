@@ -14,17 +14,22 @@ from enums import State
 
 
 class ShowForm(FlaskForm):
+    def __init__(self, artists_choices, venues_choices, **kwargs):
+        super().__init__(**kwargs)
+        self.artist_id.choices = artists_choices
+        self.venue_id.choices = venues_choices
+
     artist_id = SelectField(
         # using select to make sure it exists and for better UX
         'artist_id',
         validators=[DataRequired()],
-        choices=[],  # dynamically set
+        choices=[],
     )
     venue_id = SelectField(
         # using select to make sure it exists and for better UX
         'venue_id',
         validators=[DataRequired()],
-        choices=[],  # dynamically set
+        choices=[],
     )
     start_time = DateTimeField(
         'start_time',
@@ -59,7 +64,7 @@ class BaseForm(object):
     )
     image_link = StringField(
         'image_link',
-        validators=[URL()]
+        validators=[DataRequired(), URL()]
     )
     facebook_link = StringField(
         # Maybe there is no facebook account for this venue
@@ -75,14 +80,20 @@ class BaseForm(object):
         'seeking_description',
         validators=[Optional()]  # it can be empty
     )
-    genres = SelectMultipleField(
+    genres_ids = SelectMultipleField(
         'genres',
         validators=[DataRequired()],
-        choices=[]  # Dynamically set
+        # make sure to run migration with flask db upgrade
+        # as it will add initial data to genres table
+        choices=[]
     )
 
 
 class VenueForm(FlaskForm, BaseForm):
+    def __init__(self, genres_choices, **kwargs):
+        super().__init__(**kwargs)
+        self.genres_ids.choices = genres_choices
+
     address = StringField(
         'address',
         validators=[DataRequired()]
@@ -90,4 +101,6 @@ class VenueForm(FlaskForm, BaseForm):
 
 
 class ArtistForm(FlaskForm, BaseForm):
-    pass
+    def __init__(self, genres_choices, **kwargs):
+        super().__init__(**kwargs)
+        self.genres_ids.choices = genres_choices

@@ -16,7 +16,6 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from forms import *
-from helpers import *
 from models import setup_db, Venue, Genre, Artist, Show
 
 # ----------------------------------------------------------------------------#
@@ -103,13 +102,11 @@ def show_venue(venue_id):
 
 @app.route('/venues/create', methods=['GET', 'POST'])
 def create_venue():
-    form = VenueForm()
-    form.genres.choices = Genre.genres_tuples()
+    form = VenueForm(genres_choices=Genre.genres_choices())
 
     if form.validate_on_submit():
         venue = Venue()
-        populate_object_with_form_data(venue, form, Genre.get_genres_by_ids(
-            form.genres.data))
+        form.populate_obj(venue)
         try:
             db.session.add(venue)
             db.session.commit()
@@ -130,13 +127,22 @@ def create_venue():
 @app.route('/venues/<int:venue_id>/edit', methods=['POST', 'GET'])
 def edit_venue(venue_id):
     venue: Venue = Venue.query.get_or_404(venue_id)
+    form = VenueForm(genres_choices=Genre.genres_choices(), obj=venue)
+    # Setting genres_choices here and populate form with current venue data
+    # and I'm not adding request.form as it's already added by flask-wtf
+    # look here https://flask-wtf.readthedocs.io/en/stable/quickstart.html
+    ###
+    # Note that you don't have to pass request.form to Flask-WTF;
+    # it will load automatically.
+    # And the convenience validate_on_submit will check if it is a POST request
+    # and if it is valid.
+    ###
     venue_name = venue.name
-    form = VenueForm()
-    form.genres.choices = Genre.genres_tuples()
 
+    # this function return true only if it's a POST request and it's valid form
+    # and choices are validated automatically unless validate_choices = false
     if form.validate_on_submit():
-        populate_object_with_form_data(venue, form, Genre.get_genres_by_ids(
-            form.genres.data))
+        form.populate_obj(venue)
 
         try:
             db.session.add(venue)
@@ -153,8 +159,6 @@ def edit_venue(venue_id):
 
         flash('Venue ' + venue.name + ' was successfully updated!')
         return redirect(url_for('show_venue', venue_id=venue_id))
-
-    populate_form_with_object_data(form, venue)
 
     return render_template('forms/edit_venue.html', form=form,
                            venue_name=venue_name)
@@ -214,12 +218,11 @@ def show_artist(artist_id):
 
 @app.route('/artists/create', methods=['GET', 'POST'])
 def create_artist():
-    form = ArtistForm()
-    form.genres.choices = Genre.genres_tuples()
+    form = ArtistForm(genres_choices=Genre.genres_choices())
+
     if form.validate_on_submit():
         artist = Artist()
-        populate_object_with_form_data(artist, form, Genre.get_genres_by_ids(
-            form.genres.data))
+        form.populate_obj(artist)
         try:
             db.session.add(artist)
             db.session.commit()
@@ -240,13 +243,10 @@ def create_artist():
 @app.route('/artists/<int:artist_id>/edit', methods=['GET', 'POST'])
 def edit_artist(artist_id):
     artist = Artist.query.get_or_404(artist_id)
-    form = ArtistForm()
-    form.genres.choices = Genre.genres_tuples()
+    form = ArtistForm(genres_choices=Genre.genres_choices(), obj=artist)
     artist_name = artist.name
-    # this function return true only if it's a POST request and it's valid form
     if form.validate_on_submit():
-        populate_object_with_form_data(artist, form, Genre.get_genres_by_ids(
-            form.genres.data))
+        form.populate_obj(artist)
         try:
             db.session.add(artist)
             db.session.commit()
@@ -261,8 +261,6 @@ def edit_artist(artist_id):
             return render_template('forms/edit_artist.html', form=form,
                                    artist_name=artist_name)
         return redirect(url_for('show_artist', artist_id=artist_id))
-
-    populate_form_with_object_data(form, artist)
 
     return render_template('forms/edit_artist.html', form=form,
                            artist_name=artist_name)
@@ -294,23 +292,19 @@ def shows():
 
 @app.route('/shows/create', methods=['POST', 'GET'])
 def create_show():
-    # renders form. do not touch.              #I can't resist 😅
-    form = ShowForm()
-    form.artist_id.choices = [
-        (str(a.id), f"ID:{a.id} {a.name}") for a in
-        db.session.query(Artist.id, Artist.name).order_by(Artist.id)
-    ]
-    form.venue_id.choices = [
+    venue_choices = [
         (str(v.id), f"ID:{v.id} {v.name}") for v in
         db.session.query(Venue.id, Venue.name).order_by(Venue.id)
     ]
+    artist_choices = [
+        (str(a.id), f"ID:{a.id} {a.name}") for a in
+        db.session.query(Artist.id, Artist.name).order_by(Artist.id)
+    ]
+    form = ShowForm(artist_choices, venue_choices)
 
     if form.validate_on_submit():
-        show = Show(
-            artist_id=form.artist_id.data,
-            venue_id=form.venue_id.data,
-            start_time=form.start_time.data
-        )
+        show = Show()
+        form.populate_obj(show)
         try:
             db.session.add(show)
             db.session.commit()

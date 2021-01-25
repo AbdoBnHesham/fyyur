@@ -51,8 +51,8 @@
             <div class="form-group">
                 <label for="genres">Genres</label>
                 <small>Ctrl+Click to select multiple</small>
-                {{ form.genres(class_ = 'form-control', placeholder='Genres, separated by commas',  autofocus = true) }}
-                {% for err in form.genres.errors %}
+                {{ form.genres_ids(class_ = 'form-control', placeholder='Genres, separated by commas',  autofocus = true) }}
+                {% for err in form.genres_ids.errors %}
                     {{ err }}
                 {% endfor %}
             </div>
